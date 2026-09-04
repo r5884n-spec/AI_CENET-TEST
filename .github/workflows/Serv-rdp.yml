@@ -1,0 +1,56 @@
+name: AI Infrastructure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Install Tailscale
+        env:
+          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+
+          sudo sysctl -w net.ipv4.ip_forward=1
+          sudo sysctl -w net.ipv6.conf.all.forwarding=1
+
+          sudo tailscale up \
+            --authkey="$TAILSCALE_AUTHKEY" \
+            --hostname="github-ai-infrastructure" \
+            --advertise-exit-node
+
+          sleep 10
+
+          echo "=========================================="
+          echo "       AI INFRASTRUCTURE READY"
+          echo "=========================================="
+
+          echo ""
+          echo "Tailscale IP:"
+          sudo tailscale ip -4
+
+          echo ""
+          echo "Public IP:"
+          curl -4 https://api.ipify.org
+          echo ""
+
+          echo ""
+          echo "Tailscale status:"
+          sudo tailscale status
+
+          echo ""
+          echo "IP forwarding:"
+          sysctl net.ipv4.ip_forward
+
+          echo "=========================================="
+
+      - name: Keep Server Alive
+        run: |
+          for i in $(seq 1 360); do
+            sleep 60
+            echo "[$i/360] AI infrastructure running..."
+          done
